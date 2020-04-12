@@ -12,46 +12,44 @@ class TranscriptionFactor:
         with self.driver.session() as session:
             level1 = session.run(
                 """
-                MATCH (p:Protein {stringDbId: $stringDbId})
-                CALL apoc.neighbors.athop(p, "ACTS_ON>|INTERACTS_WITH>", 1)
-                YIELD node
-                WHERE node.dgeScore > 0
-                RETURN node
-
+                MATCH (p:Protein {displayName: $displayName})-[r:ACTS_ON|:INTERACTS_WITH]->(p2:Protein)
+                WHERE p2.dgeScore > 0
+                RETURN properties(p2) as target, properties(r) as edge
                 """,
-                stringDbId=self.properties['stringDbId']
+                displayName=self.properties['displayName']
             )
 
-            values = [record['node']['dgeScore'] for record in level1]
+            values = [record['target']['dgeScore'] *
+                      record['edge']['score'] for record in level1]
             stringScore = 0
             if len(values) > 0:
                 stringScore = sum(values)/len(values)
             session.run(
-                "MATCH (p:Protein {stringDbId: $stringDbId}) SET p.stringScore = $stringScore",
-                stringDbId=self.properties['stringDbId'], stringScore=stringScore
+                "MATCH (p:Protein {displayName: $displayName}) SET p.stringScore = $stringScore",
+                displayName=self.properties['displayName'], stringScore=stringScore
             )
 
     def calc_self_mara(self):
         with self.driver.session() as session:
             level1 = session.run(
                 """
-                MATCH (p:Protein {stringDbId: $stringDbId})
-                CALL apoc.neighbors.athop(p, "ACTIVATES_TRANSCRIPTION>", 1)
-                YIELD node
-                WHERE node.dgeScore > 0
-                RETURN node
+                MATCH (p:Protein {displayName: $displayName})-[r:ACTIVATES_TRANSCRIPTION]->(p2:Protein)
+                WHERE p2.dgeScore > 0
+                RETURN properties(p2) as target, properties(r) as edge
+e
                 """,
-                stringDbId=self.properties['stringDbId']
+                displayName=self.properties['displayName']
             )
 
-            values = [record['node']['dgeScore'] for record in level1]
+            values = [record['target']['dgeScore'] *
+                      record['edge']['score'] for record in level1]
             maraScore = 0
             if len(values) > 0:
                 maraScore = sum(values)/len(values)
 
             session.run(
-                "MATCH (p:Protein {stringDbId: $stringDbId}) SET p.maraScore = $maraScore",
-                stringDbId=self.properties['stringDbId'], maraScore=maraScore
+                "MATCH (p:Protein {displayName: $displayName}) SET p.maraScore = $maraScore",
+                displayName=self.properties['displayName'], maraScore=maraScore
             )
 
     def calc_mara(self):

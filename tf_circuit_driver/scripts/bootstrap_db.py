@@ -25,7 +25,7 @@ def parse_tf_to_target(target_dir):
                         items.append({
                             "tf": _tf,
                             "target": _target,
-                            "score": line_contents[1]
+                            "score": float(line_contents[1])
                         })
     counter = 0
     for i in range(round(len(items) / 10000)):
@@ -40,7 +40,9 @@ def parse_tf_to_target(target_dir):
                 SET p.is_tf = true
                 WITH p, x
                 MATCH (t:Protein {displayName: x.target})
-                MERGE (p)-[:ACTIVATES_TRANSCRIPTION {score: x.score}]->(t)
+                MERGE (p)-[r:ACTIVATES_TRANSCRIPTION]->(t)
+                ON MATCH SET r.score = r.score + x.score
+                ON CREATE SET r.score = x.score
                 """,
                 batch=batch
             )
@@ -54,7 +56,9 @@ def parse_tf_to_target(target_dir):
             SET p.is_tf = true
             WITH p, x
             MATCH (t:Protein {displayName: x.target})
-            MERGE (p)-[:ACTIVATES_TRANSCRIPTION {score: x.score}]->(t)
+            MERGE (p)-[r:ACTIVATES_TRANSCRIPTION]->(t)
+            ON MATCH SET r.score = r.score + x.score
+            ON CREATE SET r.score = x.score
             """,
             batch=items[counter:]
         )
@@ -104,7 +108,7 @@ def build_undirected_ppi(actions_filepath):
     click.echo('BUILDING UNDIRECTED PPIs')
     ppi = pd.read_table(actions_filepath, sep="\t", header=0)
     undirected = ppi[ppi['mode'] == 'binding'][[
-        'item_id_a', 'item_id_b', 'mode']].to_dict('records')
+        'item_id_a', 'item_id_b', 'mode', 'score']].to_dict('records')
     click.echo('Identified {length} directed ppis in manifest'.format(
         length=len(undirected)))
     counter = 0
@@ -128,7 +132,7 @@ def build_directed_ppi(actions_filepath):
     click.echo('BUILDING DIRECTED PPIs')
     ppi = pd.read_table(actions_filepath, sep="\t", header=0)
     directed = ppi[ppi['a_is_acting'] == 't'][[
-        'item_id_a', 'item_id_b', 'mode']].to_dict('records')
+        'item_id_a', 'item_id_b', 'mode', 'score']].to_dict('records')
     click.echo('Identified {length} directed ppis in manifest'.format(
         length=len(directed)))
     counter = 0
@@ -139,19 +143,24 @@ def build_directed_ppi(actions_filepath):
             start=start, end=end, total=len(directed)))
         batch = directed[start:end]
         with driver.session() as session:
-            session.run("UNWIND $directed as x MATCH (p1:Protein {stringDbId: x.item_id_a}) MATCH (p2:Protein {stringDbId: x.item_id_b}) MERGE (p1)-[:ACTS_ON]->(p2)",
+            session.run("UNWIND $directed as x MATCH (p1:Protein {stringDbId: x.item_id_a}) MATCH (p2:Protein {stringDbId: x.item_id_b}) MERGE (p1)-[:ACTS_ON {score: x.score}]->(p2)",
                         directed=batch)
         counter = counter + 10000
     with driver.session() as session:
-        session.run("UNWIND $directed as x MATCH (p1:Protein {stringDbId: x.item_id_a}) MATCH (p2:Protein {stringDbId: x.item_id_b}) MERGE (p1)-[:ACTS_ON]->(p2)",
+        session.run("UNWIND $directed as x MATCH (p1:Protein {stringDbId: x.item_id_a}) MATCH (p2:Protein {stringDbId: x.item_id_b}) MERGE (p1)-[:ACTS_ON {score: x.score}]->(p2)",
                     directed=directed[counter:])
         click.echo('directed ppi generation completed')
 
 
-def bootstrap(actions, mapping, targets, dge):
-    click.echo('INITIALIZING DB BOOTSTRAPPING')
+def bootstrap_ppi(actions, mapping):
     build_protein_nodes(mapping)
     build_undirected_ppi(actions)
     build_directed_ppi(actions)
-    parse_tf_to_target(targets)
-    parse_dge(dge)
+
+
+def construct_mara(targets):
+    parse_tf_to_target(target_dir=targets)
+
+
+def map_dge(dge):
+    parse_dge(dge_filepath=dge)
