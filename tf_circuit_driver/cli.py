@@ -208,18 +208,30 @@ class TF_CIRCUIT:
         collection = []
         for tf in self.tfs:
             m1 = self.tfs_calculated[tf]['mara']['score']
-            m2 = [x['score']
-                  for x in self.tfs_calculated[tf]['level_2']['mara']]
-            m3 = [x['score']
-                  for x in self.tfs_calculated[tf]['level_3']['mara']]
+            m2 = sum([x['score']
+                      for x in self.tfs_calculated[tf]['level_2']['mara']]) / 2
+            m3 = sum([x['score']
+                      for x in self.tfs_calculated[tf]['level_3']['mara']])/3
             p1 = self.tfs_calculated[tf]['ppi']['score']
-            p2 = [x['score']
-                  for x in self.tfs_calculated[tf]['level_2']['ppi']]
-            p3 = [x['score']
-                  for x in self.tfs_calculated[tf]['level_3']['ppi']]
-            collection.append(dict(tf=tf, m1=m1, m2=sum(m2)/2, m3=sum(m3)/3, p1=p1,
-                                   p2=sum(p2)/2, p3=sum(p3)/3, gene_score=self.dge.gene_score(tf)))
+            p2 = sum([x['score']
+                      for x in self.tfs_calculated[tf]['level_2']['ppi']]) / 2
+            p3 = sum([x['score']
+                      for x in self.tfs_calculated[tf]['level_3']['ppi']])/3
+            mara_aggregate = m1 + m2 + m3
+            ppi_aggregate = p1 + p2 + p3
+
+            collection.append(dict(tf=tf, mara=mara_aggregate,
+                                   ppi_aggregate=ppi_aggregate, gene_score=self.dge.gene_score(tf)))
         df = pd.DataFrame(collection)
+        df.sort_values(by="mara_aggregate", ascending=False, inplace=True)
+        df["MARA_RANK"] = list(range(1, df.shape[0] + 1))
+        df.sort_values(by="ppi_aggregate", ascending=False, inplace=True)
+        df["PPI_RANK"] = list(range(1, df.shape[0] + 1))
+        df.sort_values(by="gene_score", ascending=False, inplace=True)
+        df["GENE_RANK"] = list(range(1, df.shape[0] + 1))
+        df["AGGREGATE_RANK_SCORE"] = df["MARA_RANK"] + \
+            df["PPI_RANK"] + df["GENE_RANK"]
+        df.sort_values(by="AGGREGATE_RANK_SCORE", inplace=True)
         df.to_csv(export_filepath, index=None)
 
     def run(self, export_filepath):
