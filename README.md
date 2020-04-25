@@ -1,13 +1,9 @@
 # tf_circuit_driver
 
 ```{sh}
-docker-compose up -d neo4j
-pip install --editable .
-tf_circuit_driver --mode init \
---actions path/to/actions/file \
---mappings path/to/mappings/file \
---dge path/to/dge \
---targets path/to/targets/dir/
-
-tf_circuit_driver --mode calculate --output ~/test_out.csv
+tf_circuit_driver --actions /path/to/10090.protein.actions.v11.0.txt.gz \
+--mappings /path/to/10090.protein.info.v11.0.txt.gz \
+--targets /path/to/targets_0.0/ \
+--dge /path/to/sig_dge_mapped.csv \
+--output /path/to/test.csv
 ```
