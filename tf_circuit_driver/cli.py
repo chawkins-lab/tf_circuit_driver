@@ -82,7 +82,11 @@ class PPI:
     def search(self, symbol):
         rows = self.mappings[self.mappings['preferred_name']
                              == symbol].to_dict('records')
+
+        if len(rows) == 0:
+            return []
         stringID = rows[0]['protein_external_id']
+
         ppi_actions = self.actions[self.actions['item_id_a'] == stringID].to_dict(
             'records')
         target_ids = [row['item_id_b'] for row in ppi_actions]
