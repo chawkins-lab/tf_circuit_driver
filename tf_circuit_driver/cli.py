@@ -220,7 +220,7 @@ class TF_CIRCUIT:
             mara_aggregate = m1 + m2 + m3
             ppi_aggregate = p1 + p2 + p3
 
-            collection.append(dict(tf=tf, mara=mara_aggregate,
+            collection.append(dict(tf=tf, mara_aggregate=mara_aggregate,
                                    ppi_aggregate=ppi_aggregate, gene_score=self.dge.gene_score(tf)))
         df = pd.DataFrame(collection)
         df.sort_values(by="mara_aggregate", ascending=False, inplace=True)
