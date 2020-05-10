@@ -16,8 +16,13 @@ class DGE:
         rows = self.df[self.df['symbol'] == symbol].to_dict('records')
         if len(rows) > 0:
             gene = rows[0]
-            raw_score = gene['fc'] * (-1 * np.log10(gene['pvalue']))
-            return abs(raw_score)
+            defaultP = 1e-314
+            if gene['pvalue'] == 0:
+                raw_score = gene['fc'] * (-1 * np.log10(defaultP))
+                return abs(raw_score)
+            else:
+                raw_score = gene['fc'] * (-1 * np.log10(defaultP))
+                return abs(raw_score)
         else:
             return None
 
