@@ -146,3 +146,6 @@ media
 static
 
 db/data
+
+
+.DS_Store
